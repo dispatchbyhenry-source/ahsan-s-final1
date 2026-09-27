@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('catalog') }}{% if catalog_title %} · {{ catalog_title }}{% endif %} | AR Shopping World{% endblock %}
+{% block content %}
+<main class="max-w-7xl mx-auto w-full px-3 sm:px-4 py-6 sm:py-9 min-w-0">
+  <h1 class="text-2xl font-black">{{ t('shop_catalog') }}{% if catalog_title %}: {{ catalog_title }}{% endif %}</h1>
+  <p class="text-slate-500 text-sm mb-5">{{ t('catalog_hint') }}</p>
+
+  <div class="flex flex-wrap gap-2 mb-3">
+    <a href="{{ url_for('products') }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-red-600 text-white' if not selected_main and not selected_sale and not selected_new and selected=='All' else 'bg-white border' }}">{{ t('all') }}</a>
+    <a href="{{ url_for('products', sale=1) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-red-600 text-white' if selected_sale else 'bg-white border' }}">{{ t('sale') }}</a>
+    <a href="{{ url_for('products', new=1) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-red-600 text-white' if selected_new else 'bg-white border' }}">{{ t('new_arrivals') }}</a>
+    {% for group in shop_nav %}
+    <a href="{{ url_for('products', main=group.name) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-red-600 text-white' if selected_main==group.name else 'bg-white border' }}">{{ group.name }}</a>
+    {% endfor %}
+  </div>
+
+  {% if selected_main %}
+  <div class="flex flex-wrap gap-2 mb-7">
+    <a href="{{ url_for('products', main=selected_main) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-red-950 text-white' if not selected_sub else 'bg-white border' }}">{{ t('all_name', name=selected_main) }}</a>
+    {% for sub in current_subs %}
+    <a href="{{ url_for('products', main=selected_main, sub=sub) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-red-950 text-white' if selected_sub==sub else 'bg-white border' }}">{{ sub }}</a>
+    {% endfor %}
+  </div>
+  {% if selected_sub and current_sub2s %}
+  <div class="flex flex-wrap gap-2 mb-7">
+    <a href="{{ url_for('products', main=selected_main, sub=selected_sub) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-slate-800 text-white' if not selected_sub2 else 'bg-white border' }}">{{ t('all_name', name=selected_sub) }}</a>
+    {% for sub2 in current_sub2s %}
+    <a href="{{ url_for('products', main=selected_main, sub=selected_sub, sub2=sub2) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-slate-800 text-white' if selected_sub2==sub2 else 'bg-white border' }}">{{ sub2 }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if selected_sub2 and current_sub3s %}
+  <div class="flex flex-wrap gap-2 mb-7">
+    <a href="{{ url_for('products', main=selected_main, sub=selected_sub, sub2=selected_sub2) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-slate-700 text-white' if not selected_sub3 else 'bg-white border' }}">{{ t('all_name', name=selected_sub2) }}</a>
+    {% for sub3 in current_sub3s %}
+    <a href="{{ url_for('products', main=selected_main, sub=selected_sub, sub2=selected_sub2, sub3=sub3) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-slate-700 text-white' if selected_sub3==sub3 else 'bg-white border' }}">{{ sub3 }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if selected_sub3 and current_sub4s %}
+  <div class="flex flex-wrap gap-2 mb-7">
+    <a href="{{ url_for('products', main=selected_main, sub=selected_sub, sub2=selected_sub2, sub3=selected_sub3) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-slate-600 text-white' if not selected_sub4 else 'bg-white border' }}">{{ t('all_name', name=selected_sub3) }}</a>
+    {% for sub4 in current_sub4s %}
+    <a href="{{ url_for('products', main=selected_main, sub=selected_sub, sub2=selected_sub2, sub3=selected_sub3, sub4=sub4) }}" class="px-3 py-2 rounded-lg text-xs font-bold {{ 'bg-slate-600 text-white' if selected_sub4==sub4 else 'bg-white border' }}">{{ sub4 }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="mb-7"></div>
+  {% endif %}
+
+  {% if products %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    {% for p in products %}{% include '_card.html' %}{% endfor %}
+  </div>
+  {% else %}
+  <p class="bg-white border rounded-xl p-8 text-center">{{ t('no_products_matched') }}</p>
+  {% endif %}
+</main>
+{% include '_currency.html' %}
+{% endblock %}

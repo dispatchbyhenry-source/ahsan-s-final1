@@ -1,0 +1,690 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit' if product else 'New' }} Product | AR Shopping World{% endblock %}
+{% block content %}
+<main class="max-w-5xl mx-auto px-4 py-10 w-full">
+  <div class="flex justify-between items-center mb-5">
+    <h1 class="text-2xl font-black">{{ 'Edit product' if product else 'Add product' }}</h1>
+    <a href="{{ dashboard_url }}" class="text-red-600 text-sm font-bold">← Dashboard</a>
+  </div>
+  <form method="post" enctype="multipart/form-data" class="bg-white border rounded-3xl p-6 space-y-5">
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Product images (max 5)</b>
+      <p class="text-xs text-slate-500 mb-3">Each photo is cropped and resized to 1200×1200, then stored in the database. Maximum 5 images. The whole listed product, including images, must stay within 2 MB. Choose several photos at once to fill empty slots, or replace one slot, or delete it.</p>
+      <label class="block text-xs font-bold text-red-700 mb-4">
+        Choose several images
+        <input type="file" name="product_images" accept="image/jpeg,image/png,image/webp" multiple class="block mt-1 text-xs product-image-input product-image-multi">
+      </label>
+      <div class="grid sm:grid-cols-3 md:grid-cols-5 gap-3">
+        {% for slot in image_slots %}
+        <div class="border rounded-xl p-3 bg-slate-50">
+          <p class="text-xs font-bold mb-2">{{ slot.label }}</p>
+          {% if slot.url %}
+          <img src="{{ slot.url }}" alt="" class="w-full h-28 object-cover rounded-lg mb-2">
+          {% else %}
+          <div class="w-full h-28 rounded-lg mb-2 bg-white border border-dashed text-slate-400 text-xs flex items-center justify-center">No image yet</div>
+          {% endif %}
+          <label class="text-xs font-bold text-red-700">Replace
+            <input type="file" name="{{ slot.field }}" accept="image/jpeg,image/png,image/webp" class="block mt-1 text-xs product-image-input">
+          </label>
+          {% if slot.delete_url %}
+          <button type="submit" form="delete-image-{{ slot.index }}" class="mt-2 w-full bg-white border border-red-200 text-red-700 rounded-lg px-2 py-1.5 text-xs font-bold">Delete image</button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-slate-500">Product name</label>
+      <input required name="name" maxlength="100" value="{{ product.name if product else '' }}" placeholder="Product name" class="w-full border rounded-xl p-3 text-sm mt-1">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-slate-500">SKU / Product Number</label>
+      <input required name="sku" maxlength="50" value="{{ product.sku if product else '' }}" placeholder="e.g. AR-SHO-03" class="w-full border rounded-xl p-3 text-sm mt-1">
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Product condition</b>
+      <p class="text-xs text-slate-500 mb-3">Admin and listing team only. Not shown to customers. Select one.</p>
+      <div class="flex flex-wrap gap-3">
+        {% for value, label in conditions %}
+        <label class="cursor-pointer">
+          <input required class="peer sr-only" type="radio" name="condition" value="{{ value }}" {% if (product and product.condition==value) or (not product and value=='new_with_tag') %}checked{% endif %}>
+          <span class="block border-2 rounded-xl px-4 py-3 text-sm font-bold peer-checked:border-red-600 peer-checked:bg-red-50">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div>
+        <label class="text-xs font-bold text-slate-500">Main category</label>
+        <select required name="main_category" id="mainCategory" class="w-full border rounded-xl p-3 text-sm mt-1">
+          {% for category in main_categories %}
+          <option value="{{ category }}" {% if product and product.main_category==category %}selected{% endif %}>{{ category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-500">Sub category</label>
+        <select required name="sub_category" id="subCategory" class="w-full border rounded-xl p-3 text-sm mt-1">
+          {% for main_name, options in sub_categories.items() %}
+            {% for option in options %}
+            <option value="{{ option }}" data-main="{{ main_name }}" {% if product and product.main_category==main_name and product.sub_category==option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-500">Sub category 2</label>
+        <select name="sub_category_2" id="subCategory2" class="w-full border rounded-xl p-3 text-sm mt-1">
+          <option value="">None</option>
+          {% for main_name, groups in sub_categories_2.items() %}
+            {% for sub_name, options in groups.items() %}
+              {% for option in options %}
+              <option value="{{ option }}" data-main="{{ main_name }}" data-sub="{{ sub_name }}" {% if product and product.main_category==main_name and product.sub_category==sub_name and product.sub_category_2==option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-500">Sub category 3</label>
+        <select name="sub_category_3" id="subCategory3" class="w-full border rounded-xl p-3 text-sm mt-1">
+          <option value="">None</option>
+          {% for main_name, groups in sub_categories_3.items() %}
+            {% for sub_name, sub2_groups in groups.items() %}
+              {% for sub2_name, options in sub2_groups.items() %}
+                {% for option in options %}
+                <option value="{{ option }}" data-main="{{ main_name }}" data-sub="{{ sub_name }}" data-sub2="{{ sub2_name }}" {% if product and product.main_category==main_name and product.sub_category==sub_name and product.sub_category_2==sub2_name and product.sub_category_3==option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              {% endfor %}
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-500">Sub category 4</label>
+        <select name="sub_category_4" id="subCategory4" class="w-full border rounded-xl p-3 text-sm mt-1">
+          <option value="">None</option>
+          {% for main_name, groups in sub_categories_4.items() %}
+            {% for sub_name, sub2_groups in groups.items() %}
+              {% for sub2_name, sub3_groups in sub2_groups.items() %}
+                {% for sub3_name, options in sub3_groups.items() %}
+                  {% for option in options %}
+                  <option value="{{ option }}" data-main="{{ main_name }}" data-sub="{{ sub_name }}" data-sub2="{{ sub2_name }}" data-sub3="{{ sub3_name }}" {% if product and product.main_category==main_name and product.sub_category==sub_name and product.sub_category_2==sub2_name and product.sub_category_3==sub3_name and product.sub_category_4==option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                {% endfor %}
+              {% endfor %}
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-slate-500">Product type</label>
+      <select required name="product_type" id="productType" class="w-full border rounded-xl p-3 text-sm mt-1">
+        {% for type_name in product_types %}
+        <option value="{{ type_name }}" {% if product and product.product_type==type_name %}selected{% endif %}>{{ type_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="text-xs font-bold text-slate-500">Product weight (kg)</label>
+        <input type="number" step="0.01" min="0" name="weight" value="{{ product.weight if product else '' }}" placeholder="e.g. 0.45" class="w-full border rounded-xl p-3 text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-500">Packing weight (kg)</label>
+        <input type="number" step="0.01" min="0" name="packing_weight" value="{{ product.packing_weight if product else '' }}" placeholder="e.g. 0.20" class="w-full border rounded-xl p-3 text-sm mt-1">
+      </div>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-slate-500">Size group</label>
+      <select required name="size_group" class="w-full border rounded-xl p-3 text-sm mt-1">
+        {% for group in size_groups %}
+        <option value="{{ group }}" {% if product and product.size_group==group %}selected{% endif %}>{{ group }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Available sizes</b>
+      <p class="text-xs text-slate-500 mb-3">Tick a size to offer it. Extra sizes can be deleted with ×. Sizes change with product type.</p>
+      {% for type_name, slots in size_slots_by_type.items() %}
+      <div class="size-group mb-3" data-type="{{ type_name }}">
+        <p class="text-xs font-bold text-slate-400 mb-2">{{ type_name }}</p>
+        <div class="flex flex-wrap gap-2 size-group-list">
+          {% for size in slots %}
+          <span class="inline-flex items-center size-chip" data-size="{{ size.name }}">
+            <label class="cursor-pointer">
+              <input type="checkbox" name="size_{{ size.name }}" value="1" class="peer sr-only size-check" data-type="{{ type_name }}" {% if size.selected %}checked{% endif %}>
+              <span class="block min-w-12 text-center border-2 rounded-xl px-3 py-2 text-xs font-black peer-checked:border-red-600 peer-checked:bg-red-50">{{ size.name }}</span>
+            </label>
+            {% if size.extra %}
+            <button type="button" class="remove-available-size ml-1 text-red-600 text-sm font-black" data-size="{{ size.name }}" title="Delete size {{ size.name }}" aria-label="Delete size {{ size.name }}">×</button>
+            {% endif %}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      <div class="mt-4 border-t pt-3">
+        <label class="text-xs font-bold text-slate-500">Extra sizes (editable)</label>
+        <p class="text-xs text-slate-500 mb-2">Add one size or many at once (comma or new line). They are saved in Available sizes. Delete extras with ×. You can add more than 30 in one go.</p>
+        <div id="extraSizeChecks" class="flex flex-wrap gap-2 mb-2">
+          {% for size in extra_sizes %}
+          <span class="inline-flex items-center extra-size-label" data-size="{{ size }}">
+            <label class="cursor-pointer">
+              <input type="checkbox" name="extra_size" value="{{ size }}" class="peer sr-only extra-size-check" checked>
+              <span class="block min-w-12 text-center border-2 rounded-xl px-3 py-2 text-xs font-black peer-checked:border-red-600 peer-checked:bg-red-50">{{ size }}</span>
+            </label>
+            <button type="button" class="remove-available-size ml-1 text-red-600 text-sm font-black" data-size="{{ size }}" title="Delete size {{ size }}" aria-label="Delete size {{ size }}">×</button>
+          </span>
+          {% endfor %}
+        </div>
+        <div class="flex flex-wrap gap-2 items-start">
+          <textarea id="newCustomSize" name="bulk_sizes" rows="3" placeholder="e.g. 48, 49, 50, 8Y, 9Y or one size per line" class="border rounded-xl p-3 text-sm grow min-w-[220px]"></textarea>
+          <button type="button" id="addCustomSizeBtn" class="bg-red-600 text-white rounded-xl px-4 py-3 text-sm font-bold">Add sizes</button>
+        </div>
+        <input type="hidden" name="custom_sizes" id="customSizes" value="{{ custom_sizes }}">
+        <input type="hidden" name="removed_sizes" id="removedSizes" value="">
+      </div>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Colours and stock by size</b>
+      <p class="text-xs text-slate-500 mb-3">Only sizes ticked in Available sizes appear here. Tick or untick a size to show or hide its stock column.</p>
+      <div class="overflow-auto">
+        <table class="w-full text-sm" id="stockTable">
+          <thead>
+            <tr class="text-left text-slate-500 text-xs">
+              <th class="p-2">#</th>
+              <th class="p-2 min-w-40">Colour name</th>
+              {% for type_name, slots in size_slots_by_type.items() %}
+                {% for size in slots %}
+                <th class="p-2 text-center size-col" data-type="{{ type_name }}" data-size="{{ size.name }}">{{ size.name }}</th>
+                {% endfor %}
+              {% endfor %}
+              {% for size in extra_sizes %}
+              <th class="p-2 text-center extra-size-col" data-size="{{ size }}">{{ size }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for slot in color_slots %}
+            {% set color_index = loop.index %}
+            <tr class="border-t">
+              <td class="p-2 text-slate-400">{{ color_index }}</td>
+              <td class="p-2"><input name="color_name_{{ color_index }}" value="{{ slot.name }}" maxlength="40" placeholder="e.g. Black" class="w-full border rounded-lg p-2 text-sm"></td>
+              {% for type_name, slots in size_slots_by_type.items() %}
+                {% for size in slots %}
+                <td class="p-2 size-col" data-type="{{ type_name }}" data-size="{{ size.name }}">
+                  <input type="number" min="0" name="color_stock_{{ color_index }}_{{ size.name }}" value="{{ slot.sizes[size.name] }}" placeholder="0" class="w-16 border rounded-lg p-2 text-center text-sm">
+                </td>
+                {% endfor %}
+              {% endfor %}
+              {% for size in extra_sizes %}
+              <td class="p-2 extra-size-col" data-size="{{ size }}">
+                <input type="number" min="0" name="color_stock_{{ color_index }}_{{ size }}" value="{{ slot.sizes[size] }}" placeholder="0" class="w-16 border rounded-lg p-2 text-center text-sm">
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-slate-500">Description</label>
+      <textarea required name="description" maxlength="3000" rows="5" placeholder="Product description" class="w-full border rounded-xl p-3 text-sm mt-1">{{ product.description if product else '' }}</textarea>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Tags and hashtags</b>
+      <p class="text-xs text-slate-500 mb-3">Keywords for search. Separate with commas, up to 10 each.</p>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-bold text-slate-500">Product tags</label>
+          <input name="product_tags" value="{{ product.tags_text if product else '' }}" placeholder="e.g. leather, biker, winter" class="w-full border rounded-xl p-3 text-sm mt-1">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500">Hashtags</label>
+          <input name="product_hashtags" value="{{ product.hashtags_text if product else '' }}" placeholder="e.g. #leatherjacket, #menswear" class="w-full border rounded-xl p-3 text-sm mt-1">
+        </div>
+      </div>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Product rating</b>
+      <p class="text-xs text-slate-500 mb-3">Shown on the product page. Enter a value from 0 to 5.</p>
+      <input type="number" step="0.1" min="0" max="5" name="rating" value="{{ product.rating if product else 0 }}" class="w-full border rounded-xl p-3 text-sm mt-1">
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Likes</b>
+      <p class="text-xs text-slate-500 mb-3">Number of likes shown on the product.</p>
+      <input type="number" step="1" min="0" name="likes" value="{{ product.likes if product else 0 }}" class="w-full border rounded-xl p-3 text-sm mt-1">
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Basic price (EUR)</b>
+      <p class="text-xs text-slate-500 mb-3">Enter the international price in euros. Pakistani customers still use the Pakistan price below.</p>
+      <input required type="number" step="0.01" min="0.01" id="productPrice" name="price" value="{{ price_eur if product else '' }}" placeholder="e.g. 29.90" class="w-full border rounded-xl p-3 text-sm mt-1">
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Pakistan price</b>
+      <p class="text-xs text-slate-500 mb-3">Shown to Pakistani customers. Leave blank to use the euro price.</p>
+      <input type="number" step="1" min="0" id="pakistanPrice" name="pakistan_price" value="{{ product.pakistan_original_price if product else '' }}" placeholder="e.g. 4500" class="w-full border rounded-xl p-3 text-sm mt-1">
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Volume discount</b>
+      <p class="text-xs text-slate-500 mb-3">For Europe and America. Cheaper unit price when the customer buys more. Example: from 1 = 0%, from 5 = 7%, from 20 = 15%.</p>
+      <div class="overflow-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-slate-500">
+              <th class="p-2">From quantity</th>
+              <th class="p-2">Discount %</th>
+              <th class="p-2">Price after discount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for slot in volume_slots %}
+            <tr class="border-t volume-preview-row" data-volume="intl">
+              <td class="p-2"><input type="number" min="1" step="1" name="volume_min_{{ loop.index }}" value="{{ slot.min }}" placeholder="{{ 1 if loop.index==1 else (5 if loop.index==2 else 20) }}" class="w-28 border rounded-lg p-2 text-sm volume-min"></td>
+              <td class="p-2"><input type="number" min="0" max="100" step="0.01" name="volume_percent_{{ loop.index }}" value="{{ slot.percent }}" placeholder="0" class="w-28 border rounded-lg p-2 text-sm volume-percent"></td>
+              <td class="p-2 text-sm font-bold volume-result">—</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="volumePreview" class="mt-3 bg-slate-50 border rounded-xl p-3 text-xs space-y-1"></div>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Pakistan volume discount</b>
+      <p class="text-xs text-slate-500 mb-3">Same as above, but only for Pakistani customers. Leave empty to use the international volume discount.</p>
+      <div class="overflow-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-slate-500">
+              <th class="p-2">From quantity</th>
+              <th class="p-2">Discount %</th>
+              <th class="p-2">Price after discount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for slot in pakistan_volume_slots %}
+            <tr class="border-t volume-preview-row" data-volume="pk">
+              <td class="p-2"><input type="number" min="1" step="1" name="pk_volume_min_{{ loop.index }}" value="{{ slot.min }}" placeholder="{{ 1 if loop.index==1 else (5 if loop.index==2 else 20) }}" class="w-28 border rounded-lg p-2 text-sm volume-min"></td>
+              <td class="p-2"><input type="number" min="0" max="100" step="0.01" name="pk_volume_percent_{{ loop.index }}" value="{{ slot.percent }}" placeholder="0" class="w-28 border rounded-lg p-2 text-sm volume-percent"></td>
+              <td class="p-2 text-sm font-bold volume-result">—</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="pkVolumePreview" class="mt-3 bg-slate-50 border rounded-xl p-3 text-xs space-y-1"></div>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-slate-500">Where to show this product</label>
+      <select required name="region_visibility" class="w-full border rounded-xl p-3 text-sm mt-1">
+        {% for value, label in region_options %}
+        <option value="{{ value }}" {% if (product and product.region_visibility==value ) or (not product and value=='all') %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Shipping charges</b>
+      <p class="text-xs text-slate-500 mb-3">Standard and express prices for under 5 kg and over 5 kg.</p>
+      <div class="overflow-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-slate-500">
+              <th class="p-2">Region</th>
+              <th class="p-2">Under 5 kg</th>
+              <th class="p-2">Over 5 kg</th>
+              <th class="p-2">Express under 5 kg</th>
+              <th class="p-2">Express over 5 kg</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for zone in shipping_slots %}
+            <tr class="border-t">
+              <td class="p-2 font-bold">{{ zone.name }} <span class="text-xs font-normal text-slate-400">({{ 'EUR' if zone.unit=='EUR' else 'Rs' }})</span></td>
+              <td class="p-2"><input type="number" min="0" step="0.01" name="ship_under_{{ zone.key }}" value="{{ zone.under }}" class="w-24 border rounded-lg p-2 text-sm"></td>
+              <td class="p-2"><input type="number" min="0" step="0.01" name="ship_over_{{ zone.key }}" value="{{ zone.over }}" class="w-24 border rounded-lg p-2 text-sm"></td>
+              <td class="p-2"><input type="number" min="0" step="0.01" name="ship_express_under_{{ zone.key }}" value="{{ zone.express_under }}" class="w-24 border rounded-lg p-2 text-sm"></td>
+              <td class="p-2"><input type="number" min="0" step="0.01" name="ship_express_over_{{ zone.key }}" value="{{ zone.express_over }}" class="w-24 border rounded-lg p-2 text-sm"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <b class="text-sm">Check price on other platforms</b>
+      <p class="text-xs text-slate-500 mb-3">Paste Amazon, Etsy, and eBay product URLs.</p>
+      <p class="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 mb-3">If a link is not available in the product listing and a customer clicks Check price on other platforms, this message will appear: “Sorry currently this product is not available on other platforms for price comparison”</p>
+      <div class="space-y-3">
+        <input name="amazon_url" value="{{ product.amazon_url if product else '' }}" placeholder="Amazon link" class="w-full border rounded-xl p-3 text-sm">
+        <input name="etsy_url" value="{{ product.etsy_url if product else '' }}" placeholder="Etsy link" class="w-full border rounded-xl p-3 text-sm">
+        <input name="ebay_url" value="{{ product.ebay_url if product else '' }}" placeholder="eBay link" class="w-full border rounded-xl p-3 text-sm">
+      </div>
+    </div>
+
+    <div class="border rounded-xl p-4 space-y-2">
+      <b class="text-sm">Homepage placement</b>
+      <label class="block text-sm"><input type="checkbox" name="featured" {% if product and product.featured %}checked{% endif %}> Featured product</label>
+      <label class="block text-sm"><input type="checkbox" name="deal_of_week" {% if product and product.deal_of_week %}checked{% endif %}> Deal of the week</label>
+    </div>
+    {% if product %}
+    <label class="text-sm"><input type="checkbox" name="active" {% if product.active %}checked{% endif %}> Visible in store</label>
+    {% endif %}
+    <button class="w-full bg-red-600 text-white rounded-xl py-3 font-bold">{{ 'Save product changes' if product else 'Create product' }}</button>
+  </form>
+  {% for slot in image_slots %}
+    {% if slot.delete_url %}
+    <form id="delete-image-{{ slot.index }}" method="post" action="{{ slot.delete_url }}" onsubmit="return confirm('Delete this image?')"></form>
+    {% endif %}
+  {% endfor %}
+</main>
+<script>
+const productType = document.getElementById('productType');
+const mainCategory = document.getElementById('mainCategory');
+const subCategory = document.getElementById('subCategory');
+const subCategory2 = document.getElementById('subCategory2');
+const subCategory3 = document.getElementById('subCategory3');
+const subCategory4 = document.getElementById('subCategory4');
+
+function filterSelect(select, predicate, allowEmpty) {
+  const current = select.value;
+  [...select.options].forEach(option => {
+    if (!option.value && allowEmpty) {
+      option.hidden = false;
+      option.disabled = false;
+      return;
+    }
+    const show = predicate(option);
+    option.hidden = !show;
+    option.disabled = !show;
+  });
+  const visible = [...select.options].find(option => !option.disabled && (option.value || allowEmpty));
+  if (![...select.options].some(option => option.value === current && !option.disabled)) {
+    select.value = visible ? visible.value : '';
+  }
+}
+
+function updateSubCategories4() {
+  const main = mainCategory.value;
+  const sub = subCategory.value;
+  const sub2 = subCategory2.value;
+  const sub3 = subCategory3.value;
+  filterSelect(subCategory4, option => option.dataset.main === main && option.dataset.sub === sub && option.dataset.sub2 === sub2 && option.dataset.sub3 === sub3, true);
+}
+
+function updateSubCategories3() {
+  const main = mainCategory.value;
+  const sub = subCategory.value;
+  const sub2 = subCategory2.value;
+  filterSelect(subCategory3, option => option.dataset.main === main && option.dataset.sub === sub && option.dataset.sub2 === sub2, true);
+  updateSubCategories4();
+}
+
+function updateSubCategories2() {
+  const main = mainCategory.value;
+  const sub = subCategory.value;
+  filterSelect(subCategory2, option => option.dataset.main === main && option.dataset.sub === sub, true);
+  updateSubCategories3();
+}
+
+function updateSubCategories() {
+  const main = mainCategory.value;
+  filterSelect(subCategory, option => option.dataset.main === main);
+  updateSubCategories2();
+}
+
+function selectedAvailableSizes() {
+  const type = productType.value;
+  const selected = new Set();
+  document.querySelectorAll(`.size-group[data-type="${type}"] .size-check:checked`).forEach(input => {
+    selected.add(input.closest('[data-size]')?.dataset.size || input.name.replace(/^size_/, ''));
+  });
+  document.querySelectorAll('.extra-size-check:checked').forEach(input => {
+    selected.add(input.value);
+  });
+  return selected;
+}
+function syncStockColumns() {
+  const type = productType.value;
+  const selected = selectedAvailableSizes();
+  document.querySelectorAll('#stockTable .size-col, #stockTable .extra-size-col').forEach(cell => {
+    const matchesType = cell.classList.contains('extra-size-col') || cell.dataset.type === type;
+    cell.classList.toggle('hidden', !matchesType || !selected.has(cell.dataset.size));
+  });
+}
+function updateTypeSections() {
+  const type = productType.value;
+  document.querySelectorAll('.size-group').forEach(group => {
+    group.classList.toggle('hidden', group.dataset.type !== type);
+  });
+  syncStockColumns();
+}
+
+function syncCustomSizes() {
+  const values = [...document.querySelectorAll('.extra-size-check:checked')].map(input => input.value);
+  document.getElementById('customSizes').value = values.join(', ');
+}
+function removedSizeList() {
+  return (document.getElementById('removedSizes').value || '').split(',').map(part => part.trim()).filter(Boolean);
+}
+function rememberRemovedSize(size) {
+  const removed = removedSizeList();
+  if (!removed.includes(size)) {
+    removed.push(size);
+    document.getElementById('removedSizes').value = removed.join(',');
+  }
+}
+function forgetRemovedSize(size) {
+  document.getElementById('removedSizes').value = removedSizeList().filter(item => item !== size).join(',');
+}
+function removeAvailableSize(size) {
+  rememberRemovedSize(size);
+  document.querySelectorAll(`.size-chip[data-size="${size}"]`).forEach(chip => chip.remove());
+  document.querySelectorAll(`.extra-size-label[data-size="${size}"]`).forEach(chip => chip.remove());
+  document.querySelectorAll(`.size-check[name="size_${size}"]`).forEach(input => input.closest('label, .size-chip')?.remove());
+  document.querySelectorAll(`#stockTable [data-size="${size}"]`).forEach(cell => cell.remove());
+  syncCustomSizes();
+}
+function addOneSize(size) {
+  const type = productType.value;
+  forgetRemovedSize(size);
+  const existing = document.querySelector(`.size-group[data-type="${type}"] .size-check[name="size_${size}"]`);
+  if (existing) {
+    existing.checked = true;
+    syncStockColumns();
+    return true;
+  }
+  const extraExisting = [...document.querySelectorAll('.extra-size-check')].find(item => item.value === size);
+  if (extraExisting) {
+    extraExisting.checked = true;
+    syncStockColumns();
+    return true;
+  }
+  const groupList = document.querySelector(`.size-group[data-type="${type}"] .size-group-list`);
+  if (groupList) {
+    const available = document.createElement('span');
+    available.className = 'inline-flex items-center size-chip';
+    available.dataset.size = size;
+    available.innerHTML = `<label class="cursor-pointer">
+      <input type="checkbox" name="size_${size}" value="1" class="peer sr-only size-check" data-type="${type}" checked>
+      <span class="block min-w-12 text-center border-2 rounded-xl px-3 py-2 text-xs font-black peer-checked:border-red-600 peer-checked:bg-red-50">${size}</span>
+    </label>
+    <button type="button" class="remove-available-size ml-1 text-red-600 text-sm font-black" data-size="${size}" title="Delete size ${size}" aria-label="Delete size ${size}">×</button>`;
+    groupList.appendChild(available);
+  }
+  const extra = document.createElement('span');
+  extra.className = 'inline-flex items-center extra-size-label';
+  extra.dataset.size = size;
+  extra.innerHTML = `<label class="cursor-pointer">
+    <input type="checkbox" name="extra_size" value="${size}" class="peer sr-only extra-size-check" checked>
+    <span class="block min-w-12 text-center border-2 rounded-xl px-3 py-2 text-xs font-black peer-checked:border-red-600 peer-checked:bg-red-50">${size}</span>
+  </label>
+  <button type="button" class="remove-available-size ml-1 text-red-600 text-sm font-black" data-size="${size}" title="Delete size ${size}" aria-label="Delete size ${size}">×</button>`;
+  document.getElementById('extraSizeChecks').appendChild(extra);
+  syncCustomSizes();
+  const table = document.getElementById('stockTable');
+  const headRow = table.querySelector('thead tr');
+  if (!headRow.querySelector(`[data-size="${size}"]`)) {
+    const th = document.createElement('th');
+    th.className = 'p-2 text-center extra-size-col';
+    th.dataset.size = size;
+    th.textContent = size;
+    headRow.appendChild(th);
+    table.querySelectorAll('tbody tr').forEach((row, index) => {
+      const td = document.createElement('td');
+      td.className = 'p-2 extra-size-col';
+      td.dataset.size = size;
+      td.innerHTML = `<input type="number" min="0" name="color_stock_${index + 1}_${size}" placeholder="0" class="w-16 border rounded-lg p-2 text-center text-sm">`;
+      row.appendChild(td);
+    });
+  }
+  syncStockColumns();
+  return true;
+}
+function addCustomSize() {
+  const input = document.getElementById('newCustomSize');
+  const parts = (input.value || '').split(/[\s,;]+/).map(part => part.trim()).filter(Boolean);
+  if (!parts.length) {
+    input.focus();
+    return;
+  }
+  let added = 0;
+  parts.forEach(size => {
+    if (!size || size.length > 20 || /[^A-Za-z0-9./+\-]/.test(size)) {
+      return;
+    }
+    addOneSize(size);
+    added += 1;
+  });
+  if (!added) {
+    input.focus();
+    return;
+  }
+  input.value = '';
+  syncCustomSizes();
+  syncStockColumns();
+}
+productType.addEventListener('change', updateTypeSections);
+mainCategory.addEventListener('change', updateSubCategories);
+subCategory.addEventListener('change', updateSubCategories2);
+subCategory2.addEventListener('change', updateSubCategories3);
+subCategory3.addEventListener('change', updateSubCategories4);
+document.getElementById('addCustomSizeBtn').addEventListener('click', addCustomSize);
+document.getElementById('extraSizeChecks').addEventListener('change', () => {
+  syncCustomSizes();
+  syncStockColumns();
+});
+document.querySelectorAll('.size-group').forEach(group => {
+  group.addEventListener('change', event => {
+    if (event.target.classList.contains('size-check')) {
+      syncStockColumns();
+    }
+  });
+});
+document.querySelector('.size-group')?.closest('.border')?.addEventListener('click', event => {
+  const button = event.target.closest('.remove-available-size');
+  if (!button) {
+    return;
+  }
+  event.preventDefault();
+  removeAvailableSize(button.dataset.size);
+});
+function formatVolumePrice(amount, currency) {
+  if (!Number.isFinite(amount) || amount < 0) {
+    return '—';
+  }
+  if (currency === 'PKR') {
+    return `Rs ${Math.round(amount).toLocaleString('en-US')}`;
+  }
+  return `€${amount.toFixed(2)}`;
+}
+function volumePriceInfo(kind) {
+  const euro = Number(document.getElementById('productPrice')?.value);
+  const pakistan = Number(document.getElementById('pakistanPrice')?.value);
+  if (kind === 'pk' && Number.isFinite(pakistan) && pakistan > 0) {
+    return { price: pakistan, currency: 'PKR' };
+  }
+  return { price: euro, currency: 'EUR' };
+}
+function updateVolumePreview() {
+  ['intl', 'pk'].forEach(kind => {
+    const { price, currency } = volumePriceInfo(kind);
+    const box = document.getElementById(kind === 'pk' ? 'pkVolumePreview' : 'volumePreview');
+    const rows = [...document.querySelectorAll(`.volume-preview-row[data-volume="${kind}"]`)];
+    const tiers = [];
+    rows.forEach(row => {
+      const min = Number(row.querySelector('.volume-min')?.value);
+      const percent = Number(row.querySelector('.volume-percent')?.value || 0);
+      const result = row.querySelector('.volume-result');
+      if (!(min > 0) || !Number.isFinite(price) || price <= 0) {
+        if (result) result.textContent = '—';
+        return;
+      }
+      const discounted = price * (1 - Math.min(Math.max(percent, 0), 100) / 100);
+      if (result) result.textContent = formatVolumePrice(discounted, currency);
+      tiers.push({ min, percent, discounted });
+    });
+    tiers.sort((a, b) => a.min - b.min);
+    if (!box) {
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      box.textContent = kind === 'pk'
+        ? 'Enter a Pakistan price or basic EUR price to see the discount that will apply.'
+        : 'Enter the basic EUR price to see the discount that will apply.';
+      return;
+    }
+    if (!tiers.length) {
+      box.textContent = kind === 'pk'
+        ? 'No Pakistan volume rows yet. Pakistani customers will use the international volume discount.'
+        : 'No volume rows yet. Shoppers will pay the basic price.';
+      return;
+    }
+    box.innerHTML = `<p class="font-bold text-slate-600 mb-1">Discount that will apply</p>` + tiers.map(tier => {
+      const off = Number(tier.percent) > 0 ? `${tier.percent}% off` : 'no discount';
+      return `<p>from ${tier.min} item${tier.min === 1 ? '' : 's'} · ${off} · <b>${formatVolumePrice(tier.discounted, currency)}</b></p>`;
+    }).join('');
+  });
+}
+['productPrice', 'pakistanPrice'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updateVolumePreview);
+});
+document.querySelectorAll('.volume-min, .volume-percent').forEach(input => {
+  input.addEventListener('input', updateVolumePreview);
+});
+updateTypeSections();
+updateSubCategories();
+syncCustomSizes();
+updateVolumePreview();
+document.querySelector('form').addEventListener('submit', event => {
+  const multi = document.querySelector('.product-image-multi');
+  if (multi && multi.files && multi.files.length > 5) {
+    event.preventDefault();
+    alert('Maximum 5 product images.');
+  }
+});
+</script>
+{% endblock %}
